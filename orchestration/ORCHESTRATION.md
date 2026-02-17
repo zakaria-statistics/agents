@@ -4,46 +4,83 @@
 
 | Agent | Directory | Triggers | Reads From | Writes To |
 |-------|-----------|----------|------------|-----------|
-| pr-reviewer | agents/pr-reviewer/ | manual, delegated | shared/context/, own knowledge, own memory | own memory, shared/MEMORY.md |
-| coder | agents/coder/ | manual, delegated | shared/context/, own knowledge, own memory | own memory, shared/MEMORY.md |
-| deployer | agents/deployer/ | manual, post-merge | shared/context/infra.md, own knowledge | own memory, shared/MEMORY.md |
-| monitor | agents/monitor/ | manual, cron | shared/context/infra.md, own knowledge | own memory, shared/MEMORY.md |
+| orchestrator | agents/orchestrator/ | multi-agent tasks, cross-agent requests | ALL shared/*, all agent docs, routing rules | shared/handoffs/, shared/MEMORY.md, own memory |
+| pr-reviewer | agents/pr-reviewer/ | orchestrator handoff, manual | shared/context/, own knowledge, own memory | own memory, shared/MEMORY.md, handoff result |
+| coder | agents/coder/ | orchestrator handoff, manual | shared/context/, own knowledge, own memory | own memory, shared/MEMORY.md, handoff result |
+| deployer | agents/deployer/ | orchestrator handoff, post-merge | shared/context/infra.md, own knowledge | own memory, shared/MEMORY.md, handoff result |
+| monitor | agents/monitor/ | orchestrator handoff, cron | shared/context/infra.md, own knowledge | own memory, shared/MEMORY.md, handoff result |
 | instructor | agents/instructor/ | manual, proactive | ALL agent memories, shared/*, orchestration/ | own memory, shared/MEMORY.md |
+
+## How Agents Communicate
+
+```
+                    ┌─────────────┐
+                    │ ORCHESTRATOR │
+                    └──────┬──────┘
+                           │ creates/manages
+                    ┌──────▼──────┐
+                    │  shared/    │
+                    │  handoffs/  │
+                    └──────┬──────┘
+          ┌────────┬───────┼───────┬────────┐
+          ▼        ▼       ▼       ▼        ▼
+     ┌────────┐ ┌──────┐ ┌────┐ ┌───────┐ ┌──────────┐
+     │pr-revwr│ │coder │ │dplr│ │monitor│ │instructor│
+     └───┬────┘ └──┬───┘ └─┬──┘ └───┬───┘ └────┬─────┘
+         │         │       │        │           │
+         └─────────┴───────┴────────┘           │
+                        │                       │
+                 shared/MEMORY.md ◄─────────────┘
+              (cross-agent signals)        (reads only)
+```
+
+### Two Communication Channels
+
+**Channel 1 — shared/MEMORY.md** (async signals)
+Agents write cross-agent requests here:
+```
+- [timestamp] **[from-agent]** needs **[to-agent]**: [description]
+```
+The orchestrator scans for these and creates handoffs.
+
+**Channel 2 — shared/handoffs/** (managed workflows)
+The orchestrator creates structured handoff files:
+- Single-agent dispatches for simple routed tasks
+- Multi-step chains for workflows spanning agents
+- Each agent reads its step, does the work, writes the result
+- Orchestrator advances the chain when a step completes
+
+### Rules
+- Agents NEVER call each other directly
+- Only the orchestrator creates/manages handoff files
+- Agents write results back to their handoff step
+- Cross-agent requests go through shared/MEMORY.md → orchestrator picks up
 
 ## Delegation Rules
 
-### PR Lifecycle
-- PR opened → pr-reviewer reviews (if auto-review enabled)
+### PR Lifecycle (chain: coder → pr-reviewer → deployer)
+- PR opened → orchestrator routes to pr-reviewer
 - PR review complete → author addresses feedback
-- PR merged to main → deployer triggers staging deploy
+- PR merged → orchestrator routes to deployer for staging
 - Staging verified → deployer requests human approval for production
 
-### Incident Response
+### Incident Response (chain: monitor → coder → deployer)
 - Monitor detects issue → logs to shared/MEMORY.md
-- P1/P2 → monitor creates GitHub issue
-- GitHub issue created → coder picks up fix (manual or delegated)
-- Fix merged → deployer deploys
+- Orchestrator creates chain: coder fix → pr-reviewer review → deployer deploy
+- P1/P2 → monitor also creates GitHub issue directly
 
-### Code Changes
-- User requests feature/fix → coder implements
-- Coder opens PR → pr-reviewer reviews
-- Review approved → merge and deploy flow
-
-## Communication Protocol
-- Agents do not call each other directly
-- Coordination happens via:
-  1. shared/MEMORY.md — agents read for cross-cutting context
-  2. Orchestration triggers — defined above
-  3. GitHub issues — for task tracking
-- Human approves: production deploys, PR merge decisions
+### Code Changes (chain: coder → pr-reviewer → deployer)
+- User requests feature/fix → orchestrator dispatches to coder
+- Coder opens PR → orchestrator routes to pr-reviewer
+- Review approved → orchestrator routes to deployer
 
 ### User Sync
-- User asks "catch me up" → instructor scans all agent logs and produces briefing
-- User encounters unfamiliar concept → instructor explains in project context
-- User asks "how does X work" → instructor traces the workflow end-to-end
-- Instructor proactively flags: unreviewed shared/MEMORY.md entries, knowledge gaps
+- User asks "catch me up" → instructor scans all agent logs
+- User encounters unfamiliar concept → instructor explains in context
+- Instructor reads handoff files to report on workflow status
 
 ## Escalation
 - If an agent is unsure, it logs the question to shared/MEMORY.md and asks the human
 - P1 incidents always require human notification
+- Stalled handoffs (>1 hour no progress) get flagged by orchestrator
 - Instructor flags when the user hasn't been briefed on significant events
