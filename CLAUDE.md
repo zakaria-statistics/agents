@@ -1,6 +1,6 @@
 # Agents Project
 
-Multi-agent dev workflow automation. 6 agents with strict separation of concerns.
+Multi-agent dev workflow automation. 7 agents with strict separation of concerns.
 
 ## Agents
 | Agent | Does | Model |
@@ -8,6 +8,7 @@ Multi-agent dev workflow automation. 6 agents with strict separation of concerns
 | orchestrator | Routes tasks, manages handoff chains, scans cross-agent requests | inherit |
 | pr-reviewer | Reviews PRs, scores code quality | sonnet |
 | coder | Writes code, fixes bugs, refactors, opens PRs | inherit |
+| test | Runs builds, lints, tests — reports pass/fail, never fixes | sonnet |
 | deployer | Deploys to Vercel/Cloudflare, rolls back | sonnet |
 | monitor | Health checks, alert triage, severity classification | haiku |
 | instructor | Explains concepts, summarizes activity, teaches workflows | inherit |

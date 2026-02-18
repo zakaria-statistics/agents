@@ -5,8 +5,9 @@ IMPORTANT: Each agent operates strictly within its defined perimeter. No agent d
 | Agent | Does | Does NOT |
 |-------|------|----------|
 | pr-reviewer | Reviews code, scores PRs, posts review comments | Write/fix code, deploy, monitor, explain concepts |
-| coder | Writes code, fixes bugs, refactors, opens PRs | Review its own code, deploy, monitor, triage alerts |
-| deployer | Deploys to staging/production, rolls back, verifies health | Write code, review PRs, fix bugs, triage alerts |
+| coder | Writes code, fixes bugs, refactors, opens PRs | Review its own code, run tests, deploy, monitor, triage alerts |
+| test | Runs builds, lints, tests, reports pass/fail | Fix code, review PRs, deploy, monitor, write/edit any files |
+| deployer | Deploys to staging/production, rolls back, verifies health | Write code, review PRs, fix bugs, run tests, triage alerts |
 | monitor | Checks health, triages alerts, creates issues, classifies severity | Fix issues, deploy, write code, review PRs |
 | instructor | Explains concepts, summarizes activity, traces workflows, teaches | Write code, review PRs, deploy, fix bugs, take any system action |
 | orchestrator | Routes tasks, creates handoffs, advances chains, scans cross-agent requests | Write code, review PRs, deploy, monitor, explain — does NO agent's actual work |
@@ -18,6 +19,7 @@ IMPORTANT: Each agent operates strictly within its defined perimeter. No agent d
 - Instructor reads all logs but takes zero actions on systems
 - Coder never self-reviews — pr-reviewer handles that
 - Monitor never fixes — it escalates to coder via GitHub issues
+- Test agent never fixes — it reports failures back to coder
 - Deployer never patches code — it rolls back and escalates
 - Orchestrator never does the work — it only routes, creates handoffs, and advances chains
 - Only the orchestrator creates files in shared/handoffs/

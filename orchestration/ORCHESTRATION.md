@@ -7,6 +7,7 @@
 | orchestrator | agents/orchestrator/ | multi-agent tasks, cross-agent requests | ALL shared/*, all agent docs, routing rules | shared/handoffs/, shared/MEMORY.md, own memory |
 | pr-reviewer | agents/pr-reviewer/ | orchestrator handoff, manual | shared/context/, own knowledge, own memory | own memory, shared/MEMORY.md, handoff result |
 | coder | agents/coder/ | orchestrator handoff, manual | shared/context/, own knowledge, own memory | own memory, shared/MEMORY.md, handoff result |
+| test | agents/test/ | orchestrator handoff (after coder), manual | repo package.json, own knowledge, own memory | own memory, shared/MEMORY.md, handoff result |
 | deployer | agents/deployer/ | orchestrator handoff, post-merge | shared/context/infra.md, own knowledge | own memory, shared/MEMORY.md, handoff result |
 | monitor | agents/monitor/ | orchestrator handoff, cron | shared/context/infra.md, own knowledge | own memory, shared/MEMORY.md, handoff result |
 | instructor | agents/instructor/ | manual, proactive | ALL agent memories, shared/*, orchestration/ | own memory, shared/MEMORY.md |
@@ -24,11 +25,11 @@
                     └──────┬──────┘
           ┌────────┬───────┼───────┬────────┐
           ▼        ▼       ▼       ▼        ▼
-     ┌────────┐ ┌──────┐ ┌────┐ ┌───────┐ ┌──────────┐
-     │pr-revwr│ │coder │ │dplr│ │monitor│ │instructor│
-     └───┬────┘ └──┬───┘ └─┬──┘ └───┬───┘ └────┬─────┘
-         │         │       │        │           │
-         └─────────┴───────┴────────┘           │
+     ┌────────┐ ┌──────┐ ┌────┐ ┌────┐ ┌───────┐ ┌──────────┐
+     │pr-revwr│ │coder │ │test│ │dplr│ │monitor│ │instructor│
+     └───┬────┘ └──┬───┘ └─┬──┘ └─┬──┘ └───┬───┘ └────┬─────┘
+         │         │       │      │        │           │
+         └─────────┴───────┴──────┴────────┘           │
                         │                       │
                  shared/MEMORY.md ◄─────────────┘
               (cross-agent signals)        (reads only)
@@ -58,20 +59,24 @@ The orchestrator creates structured handoff files:
 
 ## Delegation Rules
 
-### PR Lifecycle (chain: coder → pr-reviewer → deployer)
-- PR opened → orchestrator routes to pr-reviewer
+### PR Lifecycle (chain: coder → test → pr-reviewer → deployer)
+- Coder opens PR → orchestrator routes to test agent
+- Tests pass → orchestrator routes to pr-reviewer
+- Tests fail → orchestrator routes back to coder with failure report
 - PR review complete → author addresses feedback
 - PR merged → orchestrator routes to deployer for staging
 - Staging verified → deployer requests human approval for production
 
-### Incident Response (chain: monitor → coder → deployer)
+### Incident Response (chain: monitor → coder → test → deployer)
 - Monitor detects issue → logs to shared/MEMORY.md
-- Orchestrator creates chain: coder fix → pr-reviewer review → deployer deploy
+- Orchestrator creates chain: coder fix → test verify → pr-reviewer review → deployer deploy
 - P1/P2 → monitor also creates GitHub issue directly
 
-### Code Changes (chain: coder → pr-reviewer → deployer)
+### Code Changes (chain: coder → test → pr-reviewer → deployer)
 - User requests feature/fix → orchestrator dispatches to coder
-- Coder opens PR → orchestrator routes to pr-reviewer
+- Coder opens PR → orchestrator routes to test agent
+- Tests pass → orchestrator routes to pr-reviewer
+- Tests fail → orchestrator routes back to coder with failure details
 - Review approved → orchestrator routes to deployer
 
 ### User Sync

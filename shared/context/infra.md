@@ -2,29 +2,13 @@
 
 ## Hosting
 
-<!-- Add services as they are onboarded -->
-<!-- Example:
 ### Vercel
-- Projects: my-app (production), my-app-staging
-- Custom domains: app.example.com
-
-### Cloudflare
-- Workers: api-worker
-- DNS: example.com
--->
+- **zakaria-portfolio**: https://zakaria-portfolio-mauve.vercel.app
+  - Framework: Next.js 15
+  - Branch: main → auto-deploy production
 
 ## Databases
-
-<!-- Example:
-### PostgreSQL
-- Host: db.example.com
-- Databases: app_prod, app_staging
--->
+<!-- None currently -->
 
 ## External Services
-
-<!-- Example:
-### Stripe
-- Mode: live + test
-- Webhook endpoint: /api/webhooks/stripe
--->
+<!-- None currently -->
